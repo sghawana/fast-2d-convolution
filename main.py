@@ -12,39 +12,20 @@ dH = 2; dW = 2 # Vertical and Horizontal stride (dHXdW)
 R = 5; S = 5 # Height and Width of the kernel (RXS)
 
 
-def count_instructions(func, *args):
-    """
-    Counts the number of instructions used by a function using
-    """
-    # Save the function to a temporary file
-    with open('temp_func.py', 'w') as f:
-        f.write('import time\n')
-        f.write('import random\n')
-        f.write('from naive import naive_conv\n')
-        f.write('import __main__\n')
-        f.write('__main__.naive_conv = naive_conv\n')
-        f.write(f'naive_conv.{func.__name__}(*{args})\n')
-
-    # Run the function with perf
-    result = subprocess.run(['perf', 'stat', '-e', 'instructions', 'python3', 'temp_func.py'],
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    
-    # Extract the number of instructions from the perf output
-    for line in result.stderr.split('\n'):
-        if 'instructions' in line:
-            return int(line.split()[0].replace(',', ''))
-    
-    return None
-
 # Test both the flatten and naive implementations for randomly initialized inputs and kernels
+print('Testing for randomly initialized inputs and kernels')
 
+img = [[[[random.random() for _ in range(W)] for _ in range(H)] for _ in range(C)] for _ in range(B)]
+ker = [[[[random.random() for _ in range(S)] for _ in range(R)] for _ in range(C)] for _ in range(M)]
 
-
-
-
+o1, _, _ = naive_conv.conv2d(img, ker, stats=True)
+o2, _, _ = flatten_conv.conv2d(img, ker, stats=True)
+print('Equal outputs: ', o1 == o2)
+print('\n')
 
 
 # Test both the flatten and naive implementations for a Particular input and kernel
+print('Testing for a particular input and kernel')
 img = [[[[-8, 4, 8],
            [-2, -9, -7],
            [7, -5, 7]],  [[-7, 6, 7],
@@ -61,10 +42,10 @@ ker = [[[[-8,1],
         [-2,1]], [[-3, -9],
                     [1, 0]]]]
 
-conv = naive_conv.conv2d(img, ker)
+conv, _, _ = naive_conv.conv2d(img, ker, stats=True)
 print('Naive method: ', conv)
 
-conv2 = flatten_conv.conv2d(img, ker)
+conv2, _, _ = flatten_conv.conv2d(img, ker, stats=True)
 print('Flatten Method: ', conv2)
 
 print('Equal outputs: ', conv == conv2)

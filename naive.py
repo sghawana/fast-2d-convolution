@@ -1,10 +1,11 @@
 import random
 import time
 
-class naive_conv():
+class naive_conv:
+    ins_count = 0  # Class variable to track the number of instructions executed
+
     def __init__(self, input_dim, kernel_dim, num_channels, num_kernels,
                  batch_size=1, stride=(1,1)):
-        
         '''
         input_dim: tuple of (H, W) where H is the height and W is the width of the input image
         kernel_dim: tuple of (R, S) where R is the height and S is the width of the kernel
@@ -31,10 +32,8 @@ class naive_conv():
         self.kernel = [[[[self.rand() for _ in range(self.S)] for _ in range(self.R)]
                         for _ in range(self.num_channels)] for _ in range(self.num_kernels)]
         
-        self.ins_count = None
-        self.output, self.time = naive_conv.conv2d(input = self.input, kernel= self.kernel,
-                                  stride = self.stride, stats=True)
-        
+        self.output, self.time, self.ins_count = naive_conv.conv2d(self.input, self.kernel, self.stride, stats=True)
+
     def rand(self):
         '''
         Returns a random number between -1 and 1
@@ -42,23 +41,25 @@ class naive_conv():
         sign = random.choice([-1, 1])
         return sign * random.random()
     
-    #can be accesses without creating an instance of the class
+    # Can be accessed without creating an instance of the class
     @staticmethod
     def conv2d(img, kernel, stride=(1,1), stats=False):
         '''
-        img: 4d python list of shape (B, C, H, W)
-        kernel: 4d python list of shape (M, C, R, S)
+        img: 4D python list of shape (B, C, H, W)
+        kernel: 4D python list of shape (M, C, R, S)
         '''
+        naive_conv.ins_count = 0  # Reset instruction count at the start
         t0 = time.time()
         
         B, C, H, W = len(img), len(img[0]), len(img[0][0]), len(img[0][0][0])
         M, C, R, S = len(kernel), len(kernel[0]), len(kernel[0][0]), len(kernel[0][0][0])
         dH, dW = stride
-        
+
         # Initialize the output tensor (B, M, H', W')
         Ho = (H - R) // dH + 1
         Wo = (W - S) // dW + 1
         out = [[[[0 for _ in range(Wo)] for _ in range(Ho)] for _ in range(M)] for _ in range(B)]
+        naive_conv.ins_count += B * M * Ho * Wo  # Instructions for initializing output tensor
             
         # Perform the naive convolution
         for b in range(B):
@@ -69,13 +70,15 @@ class naive_conv():
                             for r in range(R):
                                 for s in range(S):
                                     out[b][m][i][j] += img[b][c][i*dH + r][j*dW + s] * kernel[m][c][r][s]
-                                    
+                                    naive_conv.ins_count += 1  # Count multiplication and addition
+
         t1 = time.time()
         if stats:
-            print('Convolution done, output shape: ',
+            print('Naive convolution done, output shape: ',
                     len(out), len(out[0]), len(out[0][0]), len(out[0][0][0]))
-            print('Time taken for convolution: ', t1-t0)
-            return out, t1-t0
+            print('Time taken for naive convolution: ', t1-t0)
+            print('Instructions executed(naive):', naive_conv.ins_count)
+            return out, t1-t0, naive_conv.ins_count
         else:
             return out
     
@@ -100,6 +103,7 @@ if __name__ == '__main__':
 
     conv = naive_conv.conv2d(img, ker, stride=(1,1))
     print('Naive method: ', conv)
+    
         
     
         
